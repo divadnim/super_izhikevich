@@ -1,123 +1,146 @@
-# Our Izhikevich cell super class, which has regular spiking parameters
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jul 14 15:49:10 2021
 
-# The lab exercise today is to create two more Izhikevich cell types
-# as subclasses of this class:
-# * chattering cell type
-# * intrinsically bursting cell type
-#
-# To do so, you will need to reference the README section of this
-# repository (visit the repository page in Github and scroll down)
-# to get equations for these cells. From the equations, you will
-# figure out the parameter values you need and use them in your
-# sub class.
-#
-# Create each sub class in a separate file:
-# intrinsic_burst_cell.py
-# chattering_cell.py
-#
-# Save the files in your repository folder, right next to izhikevich_cells.py
-# At the top of each file, import your izhikevich_cells file so that
-# the cell class is available to you. Import it by adding the following line:
-# import izhikevichcells as izh
-#
-# Hint: you can now refer to the izhikevich cell object (izhCell) with:
-# izh.izhCell
-#
-# In your intrinsic_burst_cell.py file, define a subclass of the izhCell
-# and name it ibCell. Include an __init__ method that calls the izhCell
-# __init__ method first and then reassigns any parameters that need to
-# be a different value.
-#
-# When you have finished creating the child class, add a call to create one
-# and assign it to the object myCell.
-#
-# Then run the cell's simulate method
-#
-# Finally, add a test to check if this new file is running directly:
-# if __name__=='__main__':
-# and as a substatement (if True), call the plotting function from
-# izhikevich_cells.py using dot notation (hint: izh.plot...)
-#
-# Make sure to run your file to test it.
-#
-# For each cell (including the super class, regular spiking cell), you
-# can play around with the stimVal argument to find a level of current
-# input that makes your cell spike but not 'go crazy' with too much spiking.
-#
-# If you do the bonus exercises, create additional files for each bonus cell
-# you create, such as: fast_spiking_cell.py, low_threshold_spiking_cell.py,
-# and late_spiking_cell.py. For these cells, you'll notice the equations are
-# structured differently. You will need to override the super class's
-# simulation method with one unique to that subclass, so that you can
-# customize the equations inside the for loop.
-
+@author: davidsm
+Izhikevich Cell Super Class and Subclasses
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 class izhCell():
-    def __init__(self,stimVal):
-        # Define Neuron Parameters
-        self.celltype='Generic Izhikevich' # Regular spiking
-        self.C=100
-        self.vr=-60
-        self.vt=-40
-        self.k=0.7
-        self.a=0.03
-        self.b=-2
-        self.c=-56
-        self.d=100
-        self.vpeak=35
-        self.stimVal = stimVal
-    
+    def __init__(self, stimVal):
+        #Define equation parameters
+        self.celltype = "Regular Spiking"
+        self.a = 0.03
+        self.b = -2
+        self.c = -50
+        self.d = 100
+        self.vpeak = 35
+        self.k = .7
+        #self.f =
+        self.C = 100
+        self.vt = -40 #threshold voltage
+        self.vr = -60 #reset voltage
+        self.stimVal = stimVal #level of current supplied to cell input
         
-        # Set up the simulation
-        self.T=1000 # ms
-        self.tau=1 # ms - time step
-        self.n=int(np.round(self.T/self.tau))
+        self.T = 1000 #ms
+        self.tau = 1 #ms -- time step
+        self.n = int(np.round(self.T/self.tau))
         
-        # Set up the stimulation
-#        self.I = np.concatenate((np.zeros((1,int(0.1*self.n))),self.stimVal*np.ones((1,int(0.01*self.n))),self.stimVal*.1*np.ones((1,int(0.89*self.n)))), axis=1)
-        self.I = np.concatenate((np.zeros((1,int(0.1*self.n))), 
-                 self.stimVal*np.ones((1,int(0.9*self.n)))), axis=1)
-
-        # Set up placeholders for my outputs from the simulation              
-        self.v=self.vr*np.ones((1,self.n))
-        self.u=0*self.v
+        #Stimulation
+        self.I = np.concatenate((np.zeros((1,int(self.n*0.1))),self.stimVal*np.ones((1,int(self.n*0.9)))),axis=1)
+        
+        #Results Placeholder
+        self.v = self.vr * np.ones((1, self.n))
+        self.u = 0 * self.v
+    """this code is supposed to create the parameters of the graph in order to run the 
+    be able to recreate the plot using python
+    the super allows me to access the functions and methods created in the 
+    original regular spiking part of the code and use it in the 
+    intrinsic bursting and the chattering part of the code
+    with respective changes to the parameters
+    """
         
     def __repr__(self):
-        return self.celltype +' Cell with StimVal=' + str(self.stimVal)
+        return self.celltype + "Cell w Input Current =" + str(self.stimVal)
+    
+    def simulate(self):
+        for i in range(0, self.n-1):
+            #self.v[0,i+1] = self.v[0,i] + self.tau*(self.k*(self.v[0,i] - self.vr))*((self.v[0,i] - self.vt) - self.u[0,i] + self.I[0,i])/self.C
+            self.v[0,i+1] = self.v[0,i] + self.tau*(self.k*(self.v[0,i]-self.vr) * (self.v[0,i] - self.vt) - self.u[0,i] + self.I[0,i])/self.C
 
-    def simulate(self):    
-        # Run the simulation
-        # print("vpeak = ", self.vpeak)
-        for i in range(1,self.n-1):
-            self.v[0,i+1]=self.v[0,i]+self.tau*(self.k*(self.v[0,i]-self.vr)*(self.v[0,i]-self.vt)-self.u[0,i]+self.I[0,i])/self.C
-            self.u[0,i+1]=self.u[0,i]+self.tau*self.a*(self.b*(self.v[0,i]-self.vr)-self.u[0,i])
-            
-            if self.v[0,i+1]>=self.vpeak:
-                    self.v[0,i]=self.vpeak
-                    self.v[0,i+1]=self.c
-                    self.u[0,i+1]=self.u[0,i+1]+self.d 
-                    
-def plotMyData(somecell, upLim = 1000):
+            #self.u[0,i+1]= self.u[0,i] + self.tau*self.a*(self.b*(self.v[0,i]-self.vr) - self.u[0,i])
+            self.u[0,i+1] = self.u[0,i] + self.tau*self.a*(self.b*(self.v[0,i] - self.vr) - self.u[0,i])
+
+            if self.v[0,i+1] >= self.vpeak:
+                self.v[0,i] = self.vpeak
+                self.v[0,i+1] = self.c
+                self.u[0,i+1] = self.u[0, i+1] + self.d
+                
+def plot_my_data(somecell, upLim = 1000):
     tau = somecell.tau
     n = somecell.n
     v = somecell.v
     celltype = somecell.celltype
-
-    # Plot the results
-    fig = plt.figure()
-    plt.plot(tau*np.arange(0,n),v[0,:].transpose(), 'k-')
-    plt.xlabel('Time Step')
-    plt.xlim([0, upLim])
-    plt.ylabel(celltype + ' Cell Response')
-    plt.show()
-
-def createCell():
-    myCell = izhCell(stimVal=4000)        
-    myCell.simulate()
-    plotMyData(myCell)
     
-if __name__=='__main__':
-    createCell()
+    fig = plt.figure()
+    plt.plot(tau*np.arange(0,n), v[0,:].transpose(), "k-")
+    plt.xlabel("Time Step")
+    plt.xlim([0, upLim])
+    plt.ylabel(celltype + "Cell Response")
+    
+    
+                
+mycell = izhCell(100)
+mycell.simulate()
+plot_my_data(mycell)
+
+class intrinsicBursting(izhCell):
+    def __init__(self, stimVal):
+        super().__init__(stimVal)
+        self.celltype = "Intrinsic Bursting"
+        self.a = 0.01
+        self.b = 5
+        self.c = -56
+        self.d = 150
+        self.vpeak = 50
+        self.k = 1.2
+        #self.f =
+        self.C = 130
+        self.vt = -45 #threshold voltage
+        self.vr = -75 #reset voltage
+        self.stimVal = stimVal #level of current supplied to cell input
+        
+        self.T = 1000 #ms
+        self.tau = 1 #ms -- time step
+        self.n = int(np.round(self.T/self.tau))
+        
+        
+    def __repr__(self):
+        return self.celltype + "Cell w Input Current =" + str(self.stimVal)
+    
+    def simulate(self):
+        super().simulate()
+        
+    def plot_my_data(self, somecell):
+        super().plot_my_data(self, somecell, upLim = 1000)
+        
+testcell = intrinsicBursting(200)
+testcell.simulate()
+plot_my_data(testcell)
+
+class Chattering(izhCell):
+    def __init__(self, stimVal):
+        super().__init__(stimVal) 
+        self.celltype = "Chattering"
+        self.a = 0.03
+        self.b = 1
+        self.c = -40
+        self.d = 50
+        self.vpeak = 25
+        self.k = 1.5
+        #self.f =
+        self.C = 150
+        self.vt = -40 #threshold voltage
+        self.vr = -60 #reset voltage
+        self.stimVal = stimVal #level of current supplied to cell input
+        
+        self.T = 1000 #ms
+        self.tau = 1 #ms -- time step
+        self.n = int(np.round(self.T/self.tau))
+        
+        
+    def __repr__(self):
+        return self.celltype + "Cell w Input Current =" + str(self.stimVal)
+    
+    def simulate(self):
+        super().simulate()
+        
+    def plot_my_data(self, somecell):
+        super().plot_my_data(self, somecell, upLim = 1000)
+        
+testcell2 = Chattering(100)
+testcell2.simulate()
+plot_my_data(testcell2)
